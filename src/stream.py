@@ -3,7 +3,8 @@ import numpy as np
 import os
 import xarray as xr
 
-PATH_NC = '../data/cmems_20200916_3.nc'
+path_module = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+PATH_NC = os.path.join(path_module, 'data/cmems_20200916_3.nc')
 
 
 def load_nc(path_nc: str=PATH_NC):
