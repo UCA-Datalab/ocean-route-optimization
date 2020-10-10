@@ -34,17 +34,15 @@ def get_stream_velocity(nc, lat: float,  lon: float, date: str, coord_range: flo
     Returns
     -------
     stream_velocities : np.array
-        An (M, N, K)-dimensional array containing the K-dim
-        values of the magnitude. Each MxN matrix
-        element represents the value for the k_th dimension of
-        that magnitude in the m_th, n_th latitude, longitude point
-        on the discrete space.
+        An (M, N, 2)-dimensional array containing the 2-dim
+        values of the stream velocities. Each MxN matrix represents the
+        component of the corresponding velocity direction for each discrete lat, long point.
     stream_velocities_latitudes : np.array
         An (M)-dimensional vector with the latitude values corresponding
-        to the discrete points of the grid_array.
+        to the discrete points of the stream_velocities.
     stream_velocities_longitudes : np.array
         An (N)-dimensional vector with the longitude values corresponding
-        to the discrete points of the grid_array.
+        to the discrete points of the stream_velocities.
     """
     lon_float = (max(lon - coord_range, -181),
                 min(lon + coord_range, 181))
