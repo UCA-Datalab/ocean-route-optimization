@@ -141,7 +141,7 @@ def boat_movement(boat_velocity, lat, long, stream_velocities,
                                     stream_velocities_latitudes,
                                     stream_velocities_longitudes)
     new_latitude = lat + velocity[0] * ts
-    new_longitude = lat + velocity[1] * ts
+    new_longitude = long + velocity[1] * ts
     return new_latitude, new_longitude
 
 
