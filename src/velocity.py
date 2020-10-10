@@ -188,31 +188,29 @@ def desired_velocity(initial_point, final_point,
     if distance >= max_distance * grid_distance:
         warnings.warn('Distance is {}, which may be too huge. Recommended maximum distance is {}'
             .format(distance, max_distance * grid_distance), Warning, stacklevel=2)
-        boat_velocity = np.zeros([2])
 
-    else:
-        lat = initial_point[0]
-        long = initial_point[1]
+    lat = initial_point[0]
+    long = initial_point[1]
 
-        final_lat = final_point[0]
-        final_long = final_point[1]
+    final_lat = final_point[0]
+    final_long = final_point[1]
 
-        stream_initial_velocity = interpolate_discrete(
-            lat, long,
-            stream_velocities,
-            stream_velocities_latitudes,
-            stream_velocities_longitudes)
+    stream_initial_velocity = interpolate_discrete(
+        lat, long,
+        stream_velocities,
+        stream_velocities_latitudes,
+        stream_velocities_longitudes)
 
-        stream_final_velocity = interpolate_discrete(
-            final_lat, final_long,
-            stream_velocities,
-            stream_velocities_latitudes,
-            stream_velocities_longitudes)
+    stream_final_velocity = interpolate_discrete(
+        final_lat, final_long,
+        stream_velocities,
+        stream_velocities_latitudes,
+        stream_velocities_longitudes)
 
-        stream_mean_velocity = (stream_initial_velocity +
-                                stream_final_velocity) / 2
+    stream_mean_velocity = (stream_initial_velocity +
+                            stream_final_velocity) / 2
 
-        velocity = (final_point - initial_point) / ts
-        boat_velocity = velocity - stream_mean_velocity
+    velocity = (final_point - initial_point) / ts
+    boat_velocity = velocity - stream_mean_velocity
 
     return boat_velocity
