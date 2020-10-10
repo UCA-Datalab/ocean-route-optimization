@@ -6,7 +6,7 @@ import xarray as xr
 PATH_NC = '../data/cmems_20200916_3.nc'
 
 
-def load_nc(path_nc: str=PATH_NC):
+def load_nc(path_nc: str = PATH_NC):
     """
     Load the .nc file as a xarray.Dataset
     """
@@ -15,7 +15,8 @@ def load_nc(path_nc: str=PATH_NC):
     return nc
 
 
-def get_stream_velocity(nc, lat: float,  lon: float, date: str, coord_range: float=10):
+def get_stream_velocity(nc, lat: float, lon: float, date: str,
+                        coord_range: float = 10):
     """
     Get stream velocities and their corresponding latitudes and longitudes
     
@@ -45,13 +46,13 @@ def get_stream_velocity(nc, lat: float,  lon: float, date: str, coord_range: flo
         to the discrete points of the stream_velocities.
     """
     lon_float = (max(lon - coord_range, -181),
-                min(lon + coord_range, 181))
+                 min(lon + coord_range, 181))
     lat_float = (max(lat - coord_range, -61),
                  min(lat + coord_range, 61))
     # index the variables 
     nc_sel = nc.sel(time=date,
-                longitude=slice(*lon_float),
-                latitude=slice(*lat_float))
+                    longitude=slice(*lon_float),
+                    latitude=slice(*lat_float))
     # u (velocity parallel to longitude)
     u = nc_sel['uo'].data
     # v (velocity parallel to latitude)
