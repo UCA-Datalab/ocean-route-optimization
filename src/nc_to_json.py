@@ -19,7 +19,7 @@ PATH_DATA = os.path.join(path_module, 'data/')
 
 def convert_to_json(date: str,
                     path_nc: str=PATH_NC, path_data: str=PATH_DATA,
-                   max_points: int=5e6):
+                   max_points: int=1e6):
     
     path_json = os.path.join(PATH_DATA, 'nc_{}.json'.format(date))
     
@@ -33,15 +33,15 @@ def convert_to_json(date: str,
     
     nc_sub = nc.sel(time=date)
     
-    v_lon = nc_sub['uo'].data[0,:,:]
-    v_lat = nc_sub['vo'].data[0,:,:]
+    u = nc_sub['uo'].data[0,:,:]
+    v = nc_sub['vo'].data[0,:,:]
     
     while number_points > max_points:
-        v_lon = v_lon[::2,::2]
-        v_lat = v_lat[::2,::2]
+        u = u[::2,::2]
+        v = v[::2,::2]
         dx = dx * 2
         dy = dy * 2
-        number_points = v_lon.size * v_lat.size
+        number_points = u.size
     
     header = {
         "discipline":10,
@@ -64,8 +64,8 @@ def convert_to_json(date: str,
         "shape":0,
         "shapeName":"Earth spherical with radius = 6,367,470 m",
         "scanMode":0,
-        "nx":nc.longitude.shape[0],
-        "ny":nc.latitude.shape[0],
+        "nx":u.shape[0],
+        "ny":v.shape[1],
         "lo1":float(nc.longitude.valid_min),
         "la1":float(nc.latitude.valid_min),
         "lo2":float(nc.longitude.valid_max),
@@ -74,12 +74,15 @@ def convert_to_json(date: str,
         "dy":dy
         }
     
-    data = np.append(v_lon, v_lat)
-    data = np.round(data, decimals=2).tolist()
-    data = [round(x, 2) for x in data]
+    u = np.round(u.flatten(), decimals=2).tolist()
+    u = [round(x, 2) for x in u]
+    v = np.round(v.flatten(), decimals=2).tolist()
+    v = [round(x, 2) for x in v]
     
-    json_dict = {'header': header,
-                'data': data}
+    json_dict = {'U_component_of_current': {'header': header,
+                'data': u},
+                'V_component_of_current': {'header': header,
+                                          'data': v}}
 
     with open(path_json, 'w') as json_file:
         json.dump(json_dict, json_file)
