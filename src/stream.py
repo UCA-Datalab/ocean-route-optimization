@@ -58,7 +58,7 @@ def get_stream_velocity(nc, lat: float,  lon: float, date: str, coord_range: flo
     u = nc_sel['uo'].data
     # v (velocity parallel to latitude)
     v = nc_sel['vo'].data
-    stream_velocities = np.concatenate((u, v))
+    stream_velocities = np.concatenate((v, u))
     stream_velocities_latitudes = nc_sel['latitude'].data
     stream_velocities_longitudes = nc_sel['longitude'].data
     return stream_velocities, stream_velocities_latitudes, stream_velocities_longitudes
