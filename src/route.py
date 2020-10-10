@@ -1,12 +1,20 @@
 import numpy as np
 
-from .stream import get_stream_velocity, load_nc
-from .velocity import boat_movement
-from .consumption import fuel_consumption
+# This following code allows the script
+# to import the module
+import os
+import sys
+
+path_module = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append(path_module)
+
+from src.stream import get_stream_velocity, load_nc, PATH_NC
+from src.velocity import boat_movement
+from src.consumption import fuel_consumption
 
 
 def get_route_end_point(initial_position, boat_velocity_decisions, time_stamp,
-                        date, path_nc, verbose = False, coord_range = 10):
+                        date, path_nc:str = PATH_NC, verbose = False, coord_range = 10):
     """Given the coordinates and a set of M boat velocity decisions, returns
     the final vessel position.
 

@@ -1,25 +1,32 @@
 from copy import deepcopy
 from datetime import datetime
 from os.path import basename
+from math import atan
 import random
 import time
 
-import docopt
-
 from brkga_mp_ipr.algorithm import BrkgaMpIpr
 from brkga_mp_ipr.enums import ParsingEnum, Sense
-from brkga_mp_ipr.types_io import load_configuration
-
 
 from brkga_mp_ipr.types import BaseChromosome
 from math import pi
 
-from src.stream import load_nc
+# This following code allows the script
+# to import the module
+import os
+import sys
+
+path_module = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append(path_module)
+
 from src.consumption import fuel_consumption, ALPHA, BETA
+from src.route import get_route_end_point
+from src.stream import load_nc
 
 
-class RouteProblem():
+class RouteInstance():
     def __init__(self, x_start, x_target, time, steps, v_min, v_max,
+                 date,
                  w_distance=1e6,
                 alpha=ALPHA, beta=BETA):
         # Start position (lat, lon)
@@ -28,6 +35,7 @@ class RouteProblem():
         self.x_target = x_target
         # Route duration (in seconds)
         self.time = time
+        self.date = date
         # Steps
         self.steps = steps
         self.time_delta = time / steps
@@ -36,6 +44,9 @@ class RouteProblem():
         self.v_max = v_max
         self.v_diff = v_max - v_min
         self.w_distance = w_distance
+        # Angle of geodesic on Ecuator (radians)
+        self.angle_geo = atan(abs(x_start[0] - x_target[0])
+                             / abs(x_start[1] - x_target[1]))
         # Current dataset
         self.nc = load_nc()
         self.alpha = alpha
@@ -63,12 +74,17 @@ class RouteDecoder():
         Note that in this example, ``rewrite`` has not been used.
         """
         # Assuming angle is in radians
-        angle = chromosome[:instance.steps] * 2 * pi
-        v = chromosome[instance.steps:] * instance.v_diff + instance.v_min
-        fuel = fuel_consumption(v, alpha=instance.alpha, beta=instance.beta)
-        x_end = FUNCION_BORJA(v, angle, instance.x0, instance.nc, instance.time_delta)
-        distance = FUNCION_DISTANCIA_TIERRA(x_end, instance.x_target)
-        cost = fuel + distancia * instance.w_distance
+        angle = chromosome[:self.instance.steps] * 2 * pi + self.instance.angle_geo
+        v = chromosome[self.instance.steps:] * self.instance.v_diff + self.instance.v_min
+        fuel = fuel_consumption(v, alpha=self.instance.alpha, beta=self.instance.beta)
+        # Transform velocity to (lat, lon)
+        v_lon = v * np.cos(angle)
+        v_lat = v * np.sin(angle)
+        v_geo = np.append(v_lat, v_lon)
+        x_end = get_route_end_point(self.instance.x0, v_geo,
+                                   self.instance.time_delta, self.instance.date)
+        distance = FUNCION_DISTANCIA_TIERRA(x_end, self.instance.x_target)
+        cost = fuel + distancia * self.instance.w_distance
         return cost
 
 
@@ -86,6 +102,16 @@ class StopRule(ParsingEnum):
     GENERATIONS = 0
     TARGET = 1
     IMPROVEMENT = 2
+    
+    
+class BRKGAParams():
+    population_size = 100
+    elite_percentage = .1
+    mutants_percentage = .2
+    num_elite_parents = 10
+    total_parents = 50
+    num_independent_populations = 2
+    bias_type = None
 
 
 ###############################################################################
@@ -95,38 +121,33 @@ def main() -> None:
     Proceeds with the optimization. Create to avoid spread `global` keywords
     around the code.
     """
-
-    args = docopt.docopt(__doc__)
-    # print(args)
-
-    configuration_file = args["--config_file"]
-    instance_file = args["--instance_file"]
-    seed = int(args["--seed"])
-    stop_rule = StopRule(args["--stop_rule"])
+    
+    seed = 2020
+    stop_arg = 0
+    stop_rule = StopRule(stop_arg)
 
     if stop_rule == StopRule.TARGET:
-        stop_argument = float(args["--stop_arg"])
+        stop_argument = float(stop_arg)
     else:
-        stop_argument = int(args["--stop_arg"])
+        stop_argument = int(stop_arg)
 
-    maximum_time = float(args["--max_time"])
+    maximum_time = float(1e3)
 
     if maximum_time <= 0.0:
         raise RuntimeError(f"Maximum time must be larger than 0.0. "
                            f"Given {maximum_time}.")
 
-    perform_evolution = not args["--no_evolution"]
+    perform_evolution = True
 
     ########################################
     # Load config file and show basic info.
     ########################################
 
-    brkga_params, control_params = load_configuration(configuration_file)
+    brkga_params = BRKGAParams()
+    control_params = {}
 
     print(f"""------------------------------------------------------
 > Experiment started at {datetime.now()}
-> Instance: {instance_file}
-> Configuration: {configuration_file}
 > Algorithm Parameters:""", end="")
 
     if not perform_evolution:
@@ -135,7 +156,7 @@ def main() -> None:
         output_string = ""
         for name, value in vars(brkga_params).items():
             output_string += f"\n>  -{name} {value}"
-        for name, value in vars(control_params).items():
+        for name, value in control_params.items():
             output_string += f"\n>  -{name} {value}"
 
         print(output_string)
@@ -151,8 +172,15 @@ def main() -> None:
 
     print(f"\n[{datetime.now()}] Reading Route data...")
 
-    instance = RouteInstance(instance_file)
-    print(f"Number of nodes: {instance.num_nodes}")
+    x_start = (40, -9)
+    x_target = (41.08, -70)
+    time = 60 * 60 * 24 * 9
+    steps = 100
+    v_min = 0.005
+    v_max = 5
+    date = '2020-09-16'
+    instance = RouteInstance(x_start, x_target, time,
+                           steps, v_min, v_max, date)
 
     print(f"\n[{datetime.now()}] Generating initial tour...")
 
@@ -161,13 +189,7 @@ def main() -> None:
     ########################################
 
     print(f"\n[{datetime.now()}] Building BRKGA data...")
-
-    # Usually, it is a good idea to set the population size
-    # proportional to the instance size.
-    brkga_params.population_size = min(brkga_params.population_size,
-                                       10 * instance.num_nodes)
-    print(f"New population size: {brkga_params.population_size}")
-
+    
     # Build a decoder object.
     decoder = RouteDecoder(instance)
 
@@ -177,7 +199,7 @@ def main() -> None:
         decoder=decoder,
         sense=Sense.MINIMIZE,
         seed=seed,
-        chromosome_size=instance.num_nodes,
+        chromosome_size=instance.steps,
         params=brkga_params,
         evolutionary_mechanism_on=perform_evolution
     )
@@ -186,10 +208,10 @@ def main() -> None:
     # that solution. First, we create a set of keys to be used in the
     # chromosome.
     random.seed(seed)
-    keys = sorted([random.random() for _ in range(instance.num_nodes)])
+    keys = sorted([random.random() for _ in range(instance.steps)])
 
     # Then, we visit each node in the tour and assign to it a key.
-    initial_chromosome = [0] * instance.num_nodes
+    initial_chromosome = [0] * instance.steps
 
     # Inject the warm start solution in the initial population.
     brkga.set_initial_population([initial_chromosome])
@@ -318,8 +340,7 @@ def main() -> None:
           "LargeOffset,LastUpdateIteration,LastUpdateTime,"
           "Cost")
 
-    print(f"{basename(instance_file)},"
-          f"{seed},{instance.num_nodes},{total_num_iterations},"
+    print(f"{seed},{instance.steps},{total_num_iterations},"
           f"{total_elapsed_time:.2f},"
           # f"{path_relink_time:.2f},{num_path_relink_calls},"
           # f"{num_homogenities},{num_elite_improvements},{num_best_improvements},"
