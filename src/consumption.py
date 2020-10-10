@@ -20,7 +20,6 @@ def fuel_consumption(boat_velocities_scalars: np.array,
         [TONS PER DAY]
     """
 
-    boat_velocities_scalars
     fuel = alpha * boat_velocities_scalars ** 2 - beta * boat_velocities_scalars
     return fuel
     
