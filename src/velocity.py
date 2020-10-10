@@ -87,13 +87,13 @@ def velocity_composition(boat_velocity, lat, long, stream_velocities,
     - components of the boat velocity, in that order.
     * lat: float. Latitude.
     * long: float. Longitude.
-    * grid_array: array. An (M, N, K)-dimensional array containing the K-dim
+    * stream_velocities: array. An (M, N, K)-dimensional array containing the K-dim
         values of the magnitude. Each MxN matrix
         element represents the value for the k_th dimension of that magnitude in
         the m_th, n_th latitude, longitude point on the discrete space.
-    * array_latitudes: array. An (M)-dimensional vector with the latitude
+    * stream_velocities_longitudes: array. An (M)-dimensional vector with the latitude
         values corresponding to the discrete points of the grid_array.
-    * array_longitudes: array. An (N)-dimensional vector with the longitude
+    * stream_velocities_longitudes: array. An (N)-dimensional vector with the longitude
         values corresponding to the discrete points of the grid_array.
 
     Returns:
@@ -122,12 +122,12 @@ def boat_movement(boat_velocity, lat, long, stream_velocities,
     boat_velocity: array. Vector containing the latitude and longitude components of the boat velocity, in that order.
     lat: float. Latitude.
     long: float. Longitude.
-    grid_array: array. An (M, N, K)-dimensional array containing the K-dim values of the magnitude. Each MxN matrix
+    stream_velocities: array. An (M, N, K)-dimensional array containing the K-dim values of the magnitude. Each MxN matrix
         element represents the value for the k_th dimension of that magnitude in the m_th, n_th latitude, longitude point
         on the discrete space.
-    array_latitudes: array. An (M)-dimensional vector with the latitude values corresponding to the discrete points of
+    stream_velocities_latitudes: array. An (M)-dimensional vector with the latitude values corresponding to the discrete points of
         the grid_array.
-    array_longitudes: array. An (N)-dimensional vector with the longitude values corresponding to the discrete points of
+    stream_velocities_longitudes: array. An (N)-dimensional vector with the longitude values corresponding to the discrete points of
         the grid_array.
     ts: float. The time increment interval [THIS VALUE IS ASSUMED TO BE SMALL SO THE DISPLACEMENT IS SHORT].
 
@@ -159,13 +159,13 @@ def desired_velocity(initial_point, final_point,
         coordinates, expressed as latitude and longitude values.
     final_point: array. 1D vector, containing the destination point
         coordinates, expressed as latitude and longitude values.
-    grid_array: array. An (M, N, K)-dimensional array containing the K-dim
+    stream_velocities: array. An (M, N, K)-dimensional array containing the K-dim
         values of the magnitude. Each MxN matrix element represents the value
         for the k_th dimension of that magnitude in the m_th, n_th latitude,
         longitude point on the discrete space.
-    array_latitudes: array. An (M)-dimensional vector with the latitude values
+    stream_velocities_latitudes: array. An (M)-dimensional vector with the latitude values
         corresponding to the discrete points of the grid_array.
-    array_longitudes: array. An (N)-dimensional vector with the longitude values
+    stream_velocities_longitudes: array. An (N)-dimensional vector with the longitude values
         corresponding to the discrete points of the grid_array.
     time_spent: float. Time spent on that journey.
     max_distance: float. Default = 1. Max distance that can be considered for
