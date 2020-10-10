@@ -18,13 +18,30 @@ PATH_DATA = os.path.join(path_module, 'data/')
 
 
 def convert_to_json(date: str,
-                    path_nc:str=PATH_NC, path_data: str=PATH_DATA):
+                    path_nc: str=PATH_NC, path_data: str=PATH_DATA,
+                   max_points: int=5e6):
     
     path_json = os.path.join(PATH_DATA, 'nc_{}.json'.format(date))
     
     # load the NetCDF file (NetCDF4 library needed)
     assert os.path.isfile(path_nc)
     nc = xr.open_dataset(path_nc)
+    
+    number_points = nc.latitude.shape[0] * nc.longitude.shape[0]
+    dx = float(np.mean(np.diff(nc.longitude.data)))
+    dy = float(np.mean(np.diff(nc.latitude.data)))
+    
+    nc_sub = nc.sel(time=date)
+    
+    v_lon = nc_sub['uo'].data[0,:,:]
+    v_lat = nc_sub['vo'].data[0,:,:]
+    
+    while number_points > max_points:
+        v_lon = v_lon[::2,::2]
+        v_lat = v_lat[::2,::2]
+        dx = dx * 2
+        dy = dy * 2
+        number_points = v_lon.size * v_lat.size
     
     header = {
         "discipline":10,
@@ -43,7 +60,7 @@ def convert_to_json(date: str,
         "surface1Type":160,
         "surface1TypeName":"Depth below sea level",
         "surface1Value":15.0,
-        "numberPoints":nc.latitude.shape[0] * nc.longitude.shape[0],
+        "numberPoints":number_points,
         "shape":0,
         "shapeName":"Earth spherical with radius = 6,367,470 m",
         "scanMode":0,
@@ -53,14 +70,9 @@ def convert_to_json(date: str,
         "la1":float(nc.latitude.valid_min),
         "lo2":float(nc.longitude.valid_max),
         "la2":float(nc.latitude.valid_max),
-        "dx":float(np.mean(np.diff(nc.longitude.data))),
-        "dy":float(np.mean(np.diff(nc.latitude.data)))
+        "dx":dx,
+        "dy":dy
         }
-    
-    nc_sub = nc.sel(time=date)
-    
-    v_lon = nc_sub['uo'].data[0,:,:]
-    v_lat = nc_sub['vo'].data[0,:,:]
     
     data = np.append(v_lon, v_lat)
     data = np.round(data, decimals=2).tolist()
