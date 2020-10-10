@@ -186,7 +186,8 @@ def desired_velocity(initial_point, final_point,
                            - stream_velocities_latitudes[0])
 
     if distance >= max_distance * grid_distance:
-        print('That distance is huge for me!')
+        warnings.warn('Distance is {}, which may be too huge. Recommended maximum distance is {}'
+            .format(distance, max_distance * grid_distance), Warning, stacklevel=2)
         boat_velocity = np.zeros([2])
 
     else:
