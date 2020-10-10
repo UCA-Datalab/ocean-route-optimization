@@ -62,7 +62,9 @@ def convert_to_json(date: str,
     v_lon = nc_sub['uo'].data[0,:,:]
     v_lat = nc_sub['vo'].data[0,:,:]
     
-    data = np.round(np.append(v_lon, v_lat), 2).tolist()
+    data = np.append(v_lon, v_lat)
+    data = np.round(data, decimals=2).tolist()
+    data = [round(x, 2) for x in data]
     
     json_dict = {'header': header,
                 'data': data}
