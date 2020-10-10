@@ -9,7 +9,7 @@ def fuel_consumption(velocity: np.array,
     """
     Params
     ------
-    velocity : numpy.array
+    velocity : float
         En nudos
     alpha : float, default=ALPHA
     beta : float, default=BETA
