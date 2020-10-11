@@ -54,7 +54,7 @@ def get_route_end_point(initial_position, boat_velocity_decisions, time_stamp,
 
     # Total travel time
     total_decisions = boat_velocity_decisions.shape[0]
-    if len(time_stamp) == 1:
+    if isinstance(time_stamp, float) or (len(time_stamp) == 1):
         time_stamp = np.ones([total_decisions]) * time_stamp
 
     total_time = np.sum(time_stamp)
@@ -84,7 +84,7 @@ def get_route_end_point(initial_position, boat_velocity_decisions, time_stamp,
         new_position = boat_movement(scalar_boat_velocity_decisions[decision],
                                      current_position[0],
                                      current_position[1],
-                                     stream_velocities,
+                                     stream_velocities.T,
                                      stream_velocities_lats,
                                      stream_velocities_longs,
                                      time_stamp[decision])

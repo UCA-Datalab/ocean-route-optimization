@@ -140,6 +140,9 @@ def boat_movement(boat_velocity, lat, long, stream_velocities,
     velocity = velocity_composition(boat_velocity, lat, long, stream_velocities,
                                     stream_velocities_latitudes,
                                     stream_velocities_longitudes)
+    # If NaN, it implies the boat has found land
+    # It does not advance
+    velocity = np.nan_to_num(velocity)
     new_latitude = lat + velocity[0] * ts
     new_longitude = long + velocity[1] * ts
     return new_latitude, new_longitude

@@ -2,11 +2,13 @@ from copy import deepcopy
 from datetime import datetime
 from os.path import basename
 from math import atan
+import numpy as np
 import random
 import time
 
 from brkga_mp_ipr.algorithm import BrkgaMpIpr
 from brkga_mp_ipr.enums import ParsingEnum, Sense
+from brkga_mp_ipr.types import BiasFunctionType
 
 from brkga_mp_ipr.types import BaseChromosome
 from math import pi
@@ -74,17 +76,19 @@ class RouteDecoder():
         Note that in this example, ``rewrite`` has not been used.
         """
         # Assuming angle is in radians
-        angle = chromosome[:self.instance.steps] * 2 * pi + self.instance.angle_geo
-        v = chromosome[self.instance.steps:] * self.instance.v_diff + self.instance.v_min
+        chro = np.array(chromosome)
+        angle = chro[:self.instance.steps] * 2 * pi + self.instance.angle_geo
+        v = chro[self.instance.steps:] * self.instance.v_diff + self.instance.v_min
         fuel = fuel_consumption(v, alpha=self.instance.alpha, beta=self.instance.beta)
         # Transform velocity to (lat, lon)
         v_lon = v * np.cos(angle)
         v_lat = v * np.sin(angle)
-        v_geo = np.append(v_lat, v_lon)
-        x_end = get_route_end_point(self.instance.x0, v_geo,
+        v_geo = np.stack((v_lat, v_lon), axis=1)
+        x_end, fuel, _, _  = get_route_end_point(self.instance.x_start, v_geo,
                                    self.instance.time_delta, self.instance.date)
-        distance = FUNCION_DISTANCIA_TIERRA(x_end, self.instance.x_target)
-        cost = fuel + distancia * self.instance.w_distance
+        #distance = FUNCION_DISTANCIA_TIERRA(x_end, self.instance.x_target)
+        distance = abs(np.sum(np.array(x_end) - np.array(self.instance.x_target)))
+        cost = sum(fuel) + distance * self.instance.w_distance
         return cost
 
 
@@ -105,13 +109,36 @@ class StopRule(ParsingEnum):
     
     
 class BRKGAParams():
+    # Population size
     population_size = 100
-    elite_percentage = .1
-    mutants_percentage = .2
-    num_elite_parents = 10
-    total_parents = 50
-    num_independent_populations = 2
-    bias_type = None
+    # Elite percentage
+    elite_percentage = 0.30
+    # Mutants percentage
+    mutants_percentage = 0.15
+    # Number of elite parents to mate
+    num_elite_parents = 2
+    # Total number of parents to mate
+    total_parents = 3
+    # Bias function to be used to rank the parents
+    bias_type = BiasFunctionType.LOGINVERSE
+    # Number of independent populations
+    num_independent_populations = 3
+    # Number of pairs of chromosomes to be tested to path relinking.
+    pr_number_pairs = 0
+    # Mininum distance between chromosomes to path-relink
+    pr_minimum_distance = 0.15
+    # Path relink type
+    pr_type = 'PERMUTATION'
+    # Individual selection to path-relink
+    pr_selection = 'BESTSOLUTION'
+    # Defines the block size based on the size of the population
+    alpha_block_size = 1.0
+    # Percentage/path size
+    pr_percentage = 1.0
+    # Interval at which elite chromosomes are exchanged (0 means no exchange)
+    exchange_interval = 200
+    # Number of elite chromosomes exchanged from each population
+    num_exchange_indivuduals = 2
 
 
 ###############################################################################
@@ -147,8 +174,8 @@ def main() -> None:
     control_params = {}
 
     print(f"""------------------------------------------------------
-> Experiment started at {datetime.now()}
-> Algorithm Parameters:""", end="")
+        > Experiment started at {datetime.now()}
+        > Algorithm Parameters:""", end="")
 
     if not perform_evolution:
         print(">    - Simple multi-start: on (no evolutionary operators)")
@@ -161,10 +188,10 @@ def main() -> None:
 
         print(output_string)
         print(f"""> Seed: {seed}
-> Stop rule: {stop_rule}
-> Stop argument: {stop_argument}
-> Maximum time (s): {maximum_time}
-------------------------------------------------------""")
+        > Stop rule: {stop_rule}
+        > Stop argument: {stop_argument}
+        > Maximum time (s): {maximum_time}
+        ------------------------------------------------------""")
 
     ########################################
     # Load instance and adjust BRKGA parameters
@@ -174,12 +201,12 @@ def main() -> None:
 
     x_start = (40, -9)
     x_target = (41.08, -70)
-    time = 60 * 60 * 24 * 9
+    travel_time = 60 * 60 * 24 * 9
     steps = 100
-    v_min = 0.005
+    v_min = 10
     v_max = 5
     date = '2020-09-16'
-    instance = RouteInstance(x_start, x_target, time,
+    instance = RouteInstance(x_start, x_target, travel_time,
                            steps, v_min, v_max, date)
 
     print(f"\n[{datetime.now()}] Generating initial tour...")
@@ -199,7 +226,7 @@ def main() -> None:
         decoder=decoder,
         sense=Sense.MINIMIZE,
         seed=seed,
-        chromosome_size=instance.steps,
+        chromosome_size=instance.steps * 2,
         params=brkga_params,
         evolutionary_mechanism_on=perform_evolution
     )
@@ -208,10 +235,10 @@ def main() -> None:
     # that solution. First, we create a set of keys to be used in the
     # chromosome.
     random.seed(seed)
-    keys = sorted([random.random() for _ in range(instance.steps)])
+    keys = sorted([random.random() for _ in range(instance.steps * 2)])
 
     # Then, we visit each node in the tour and assign to it a key.
-    initial_chromosome = [0] * instance.steps
+    initial_chromosome = [0] * instance.steps * 2
 
     # Inject the warm start solution in the initial population.
     brkga.set_initial_population([initial_chromosome])
